@@ -40,11 +40,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommonAppWriter.cs" />
-    <Compile Include="IConfigurations.cs" />
+    <Compile Include="CommonAppXmlFileWriter.cs" />
+    <Compile Include="Extensions\FileInfoConfigWriterExtension.cs" />
+    <Compile Include="Extensions\StringXmlSanitizeExtension.cs" />
+    <Compile Include="IAppConfigurations.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="xml\configuration\XmlConfigAttribute.cs" />
+    <Compile Include="attributes\ConfigAttributeAttribute.cs" />
     <Compile Include="xml\configuration\XmlConfigWriter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="registry\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

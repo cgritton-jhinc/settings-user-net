@@ -19,11 +19,11 @@ namespace UnitTest.cgritton.libs.net.settings
         [TestCleanup()]
         public void DestroyTestDirectory()
         {
-           if (System.IO.Directory.Exists(testDir)) System.IO.Directory.Delete(testDir, true);
+           //if (System.IO.Directory.Exists(testDir)) System.IO.Directory.Delete(testDir, true);
         }
 
         [TestMethod]
-        public void WriteValueNoSection()
+        public void WriteValueNoSectionExtension()
         {
             //set variables
             string field = "my-app-field";
@@ -31,13 +31,33 @@ namespace UnitTest.cgritton.libs.net.settings
             System.IO.FileInfo file = new System.IO.FileInfo(testDir + @"\global-app.config");
 
             //get writer
-            IConfigurations configs = new CommonAppWriter();
+            IAppConfigurations configs = file.ToXmlFileWriter();
 
             //write our value
-            configs.WriteValue(file, field, value);
+            configs.WriteValue(field, value);
 
             //retrieve our value
-            string result = configs.GetValue(file, field);
+            string result = configs.GetValue(field);
+
+            Assert.AreEqual(value, result);
+        }
+
+        [TestMethod]
+        public void WriteValueNoSectionOverrideExtension()
+        {
+            //set variables
+            string field = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+            string value = System.Reflection.MethodBase.GetCurrentMethod().Name;
+            System.IO.FileInfo file = new System.IO.FileInfo(testDir + @"\local-app.config");
+
+            //get writer
+            IAppConfigurations configs = file.ToXmlFileWriter(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType.Namespace, @"unit-test");
+
+            //write our value
+            configs.WriteValue(field, value);
+
+            //retrieve our value
+            string result = configs.GetValue(field);
 
             Assert.AreEqual(value, result);
         }

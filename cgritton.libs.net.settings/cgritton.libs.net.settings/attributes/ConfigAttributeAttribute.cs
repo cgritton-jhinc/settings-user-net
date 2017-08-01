@@ -6,24 +6,25 @@
 // Last Modified By : cgritton-jhinc
 // Last Modified On : 07-31-2017
 // ***********************************************************************
-// <copyright file="XmlConfigAttribute.cs" company="">
+// <copyright file="ConfigAttributeAttribute.cs" company="">
 //     Copyright ©  2017
 // </copyright>
 // <summary></summary>
 // ***********************************************************************
 using System;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// The configuration namespace.
 /// </summary>
-namespace cgritton.libs.net.settings.xml.configuration
+namespace cgritton.libs.net.settings
 {
     /// <summary>
     /// Class XmlConfigAttribute.
     /// </summary>
     /// <seealso cref="System.Attribute" />
     [System.AttributeUsage(AttributeTargets.Class)]
-    public class XmlConfigAttribute : System.Attribute
+    public class ConfigAttributeAttribute : System.Attribute
     {
 
         /// <summary>
@@ -31,7 +32,7 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// </summary>
         /// <param name="rootelem">The root element.</param>
         /// <param name="settingselem">The settings element.</param>
-        public XmlConfigAttribute(string rootelem, string settingselem)
+        public ConfigAttributeAttribute(string rootelem, string settingselem)
         {
             root = rootelem;
             settings = settingselem;
@@ -52,7 +53,10 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <value>The root element.</value>
         public string RootElement
         {
-            get { return root; }
+            get
+            {
+                return root;
+            }
         }
 
         /// <summary>
@@ -61,7 +65,10 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <value>The settings element.</value>
         public string SettingsElement
         {
-            get { return settings; }
+            get
+            {
+                return settings;
+            }
         }
 
     }

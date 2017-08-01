@@ -13,6 +13,7 @@
 // ***********************************************************************
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 /// <summary>
 /// The configuration namespace.
@@ -22,16 +23,25 @@ namespace cgritton.libs.net.settings.xml.configuration
     /// <summary>
     /// Class XmlConfigWriter.
     /// </summary>
-    [XmlConfig("configuration", "settings")]
-    public abstract class XmlConfigWriter : IConfigurations
+    [ConfigAttribute("configuration", "settings")]
+    public abstract class XmlConfigWriter : IAppConfigurations
     {
+        /// <summary>
+        /// The source
+        /// </summary>
+        private System.IO.FileInfo source = null;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="xmlconfigwriter" /> class.
         /// </summary>
-        public XmlConfigWriter()
+        public XmlConfigWriter(System.IO.FileInfo settingsfile)
         {
             //default constructor
+            if (settingsfile == null)
+            {
+                throw new System.InvalidOperationException("You must supply a settings file even if the file does not currently exist.");
+            }
+            source = settingsfile;
         }
 
         /// <summary>
@@ -40,7 +50,7 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <param name="rootelement">The rootelement.</param>
         /// <param name="settingselement">The settingselement.</param>
         /// <remarks>Overrides settings that are applied in the class xmlconfigattribute attribute.</remarks>
-        public XmlConfigWriter(string rootelement, string settingselement)
+        public XmlConfigWriter(System.IO.FileInfo settingsfile, string rootelement, string settingselement) : this(settingsfile)
         {
             _rootelem = rootelement;
             _settingselem = settingselement;
@@ -65,17 +75,17 @@ namespace cgritton.libs.net.settings.xml.configuration
             {
                 if (!string.IsNullOrEmpty(_rootelem))
                 {
-                    return _rootelem;
+                    return _rootelem.SanitizeForXml(); 
                 }
                 System.Reflection.MemberInfo info = GetType();
                 object[] attributes = info.GetCustomAttributes(true);
                 for (int i = 0; i < attributes.Length; i++)
                 {
-                    if (attributes[i] is XmlConfigAttribute)
+                    if (attributes[i] is ConfigAttributeAttribute)
                     {
-                        XmlConfigAttribute thisatt = (XmlConfigAttribute)attributes[i];
+                        ConfigAttributeAttribute thisatt = (ConfigAttributeAttribute)attributes[i];
                         _rootelem = thisatt.RootElement;
-                        return _rootelem;
+                        return _rootelem.SanitizeForXml(); ;
                     }
                 }
 
@@ -93,17 +103,17 @@ namespace cgritton.libs.net.settings.xml.configuration
             {
                 if (!string.IsNullOrEmpty(_settingselem))
                 {
-                    return _settingselem;
+                    return _settingselem.SanitizeForXml();
                 }
                 System.Reflection.MemberInfo info = GetType();
                 object[] attributes = info.GetCustomAttributes(true);
                 for (int i = 0; i < attributes.Length; i++)
                 {
-                    if (attributes[i] is XmlConfigAttribute)
+                    if (attributes[i] is ConfigAttributeAttribute)
                     {
-                        XmlConfigAttribute thisatt = (XmlConfigAttribute)attributes[i];
+                        ConfigAttributeAttribute thisatt = (ConfigAttributeAttribute)attributes[i];
                         _settingselem = thisatt.SettingsElement;
-                        return _settingselem;
+                        return _settingselem.SanitizeForXml();
                     }
                 }
 
@@ -114,22 +124,21 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <summary>
         /// Writes the value.
         /// </summary>
-        /// <param name="output">The output.</param>
         /// <param name="field">The field.</param>
         /// <param name="value">The value.</param>
-        public void WriteValue(System.IO.FileInfo output, string field, string value)
+        public void WriteValue(string field, string value)
         {
             try
             {
                 //create a base document
                 System.Xml.XmlDocument xmldoc = new System.Xml.XmlDocument();
 
-                if (output.Exists)
+                if (source.Exists)
                 {
                     try
                     {
                         //load existing file
-                        xmldoc.Load(output.FullName);
+                        xmldoc.Load(source.FullName);
                     }
                     catch (Exception e)
                     {
@@ -159,7 +168,7 @@ namespace cgritton.libs.net.settings.xml.configuration
                     {
 
                         //create document backup in case user modified incorrectly
-                        string newname = output.FullName.Replace(output.Extension, ".bak");
+                        string newname = source.FullName.Replace(source.Extension, ".bak");
                         int rc = 1;
                         do
                         {
@@ -167,14 +176,14 @@ namespace cgritton.libs.net.settings.xml.configuration
                             if (System.IO.File.Exists(newname))
                             {
                                 //create incremented new name
-                                newname = output.FullName.Replace(output.Extension, "_copy(" + rc.ToString() + ").bak");
+                                newname = source.FullName.Replace(source.Extension, "_copy(" + rc.ToString() + ").bak");
                             }
 
                             rc++;
 
                         } while (System.IO.File.Exists(newname));
 
-                        output.CopyTo(newname);
+                        source.CopyTo(newname);
 
                         //invalid settngs, start fresh
                         xmldoc.LoadXml(@"<" + getrootname + "><" + getsettingsname + " /></" + getrootname + ">");
@@ -214,8 +223,8 @@ namespace cgritton.libs.net.settings.xml.configuration
                 }
 
                 //save xml document to file
-                xmldoc.Save(output.FullName);
-                output.Refresh();
+                xmldoc.Save(source.FullName);
+                source.Refresh();
 
             }
             catch (Exception e)
@@ -230,23 +239,23 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <summary>
         /// Writes the value.
         /// </summary>
-        /// <param name="output">The output.</param>
+        /// <param name="source">The source.</param>
         /// <param name="section">The section.</param>
         /// <param name="field">The field.</param>
         /// <param name="value">The value.</param>
-        public void WriteValue(System.IO.FileInfo output, string section, string field, string value)
+        public void WriteValue(string section, string field, string value)
         {
             try
             {
                 //create a base document
                 System.Xml.XmlDocument xmldoc = new System.Xml.XmlDocument();
 
-                if (output.Exists)
+                if (source.Exists)
                 {
                     try
                     {
                         //load existing file
-                        xmldoc.Load(output.FullName);
+                        xmldoc.Load(source.FullName);
                     }
                     catch (Exception e)
                     {
@@ -276,7 +285,7 @@ namespace cgritton.libs.net.settings.xml.configuration
                     {
 
                         //create document backup in case user modified incorrectly
-                        string newname = output.FullName.Replace(output.Extension, ".bak");
+                        string newname = source.FullName.Replace(source.Extension, ".bak");
                         int rc = 1;
                         do
                         {
@@ -284,14 +293,14 @@ namespace cgritton.libs.net.settings.xml.configuration
                             if (System.IO.File.Exists(newname))
                             {
                                 //create incremented new name
-                                newname = output.FullName.Replace(output.Extension, "_copy(" + rc.ToString() + ").bak");
+                                newname = source.FullName.Replace(source.Extension, "_copy(" + rc.ToString() + ").bak");
                             }
 
                             rc++;
 
                         } while (System.IO.File.Exists(newname));
 
-                        output.CopyTo(newname);
+                        source.CopyTo(newname);
 
                         //invalid settngs, start fresh
                         xmldoc.LoadXml(@"<" + getrootname + "><" + getsettingsname + " /></" + getrootname + ">");
@@ -340,8 +349,8 @@ namespace cgritton.libs.net.settings.xml.configuration
                 }
 
                 //save xml document to file
-                xmldoc.Save(output.FullName);
-                output.Refresh();
+                xmldoc.Save(source.FullName);
+                source.Refresh();
             }
             catch (Exception e)
             {
@@ -356,10 +365,9 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <summary>
         /// Gets the value.
         /// </summary>
-        /// <param name="input">The input.</param>
         /// <param name="field">The field.</param>
         /// <returns>System.String.</returns>
-        public string GetValue(System.IO.FileInfo input, string field)
+        public string GetValue(string field)
         {
             string defaultval = String.Empty;
             try
@@ -367,10 +375,10 @@ namespace cgritton.libs.net.settings.xml.configuration
                 //create a base document
                 System.Xml.XmlDocument xmldoc = new System.Xml.XmlDocument();
 
-                if (input.Exists)
+                if (source.Exists)
                 {
                     //load existing file
-                    xmldoc.Load(input.FullName);
+                    xmldoc.Load(source.FullName);
 
                     //get root element
                     System.Xml.XmlElement root = xmldoc.DocumentElement;
@@ -407,11 +415,10 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <summary>
         /// Gets the value.
         /// </summary>
-        /// <param name="input">The input.</param>
         /// <param name="section">The section.</param>
         /// <param name="field">The field.</param>
         /// <returns>System.String.</returns>
-        public string GetValue(System.IO.FileInfo input, string section, string field)
+        public string GetValue(string section, string field)
         {
             string defaultval = String.Empty;
             try
@@ -419,10 +426,10 @@ namespace cgritton.libs.net.settings.xml.configuration
                 //create a base document
                 System.Xml.XmlDocument xmldoc = new System.Xml.XmlDocument();
 
-                if (input.Exists)
+                if (source.Exists)
                 {
                     //load existing file
-                    xmldoc.Load(input.FullName);
+                    xmldoc.Load(source.FullName);
 
                     //get root element
                     System.Xml.XmlElement root = xmldoc.DocumentElement;
@@ -458,19 +465,18 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <summary>
         /// Deletes the section.
         /// </summary>
-        /// <param name="input">The input.</param>
         /// <param name="section">The section.</param>
-        public void DeleteSection(System.IO.FileInfo input, string section)
+        public void DeleteSection(string section)
         {
             try
             {
                 //create a base document
                 System.Xml.XmlDocument xmldoc = new System.Xml.XmlDocument();
 
-                if (input.Exists)
+                if (source.Exists)
                 {
                     //load existing file
-                    xmldoc.Load(input.FullName);
+                    xmldoc.Load(source.FullName);
 
                     //get root element
                     System.Xml.XmlElement root = xmldoc.DocumentElement;
@@ -481,8 +487,8 @@ namespace cgritton.libs.net.settings.xml.configuration
                     if (settings != null)
                     {
                         settings.ParentNode.RemoveChild(settings);
-                        xmldoc.Save(input.FullName);
-                        input.Refresh();
+                        xmldoc.Save(source.FullName);
+                        source.Refresh();
                     }
 
                 }
@@ -497,10 +503,9 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <summary>
         /// Gets the section keys.
         /// </summary>
-        /// <param name="input">The input.</param>
         /// <param name="section">The section.</param>
         /// <returns>List&lt;System.String&gt;.</returns>
-        public List<string> GetSectionKeys(System.IO.FileInfo input, string section)
+        public List<string> GetSectionKeys(string section)
         {
             List<string> keys = new List<string>();
             try
@@ -508,10 +513,10 @@ namespace cgritton.libs.net.settings.xml.configuration
                 //create a base document
                 System.Xml.XmlDocument xmldoc = new System.Xml.XmlDocument();
 
-                if (input.Exists)
+                if (source.Exists)
                 {
                     //load existing file
-                    xmldoc.Load(input.FullName);
+                    xmldoc.Load(source.FullName);
 
                     //get root element
                     System.Xml.XmlElement root = xmldoc.DocumentElement;
@@ -546,9 +551,8 @@ namespace cgritton.libs.net.settings.xml.configuration
         /// <summary>
         /// Gets the sections.
         /// </summary>
-        /// <param name="input">The input.</param>
         /// <returns>List&lt;System.String&gt;.</returns>
-        public List<string> GetSections(System.IO.FileInfo input)
+        public List<string> GetSections()
         {
             List<string> _sections = new List<string>();
             try
@@ -556,10 +560,10 @@ namespace cgritton.libs.net.settings.xml.configuration
                 //create a base document
                 System.Xml.XmlDocument xmldoc = new System.Xml.XmlDocument();
 
-                if (input.Exists)
+                if (source.Exists)
                 {
                     //load existing file
-                    xmldoc.Load(input.FullName);
+                    xmldoc.Load(source.FullName);
 
                     //get root element
                     System.Xml.XmlElement root = xmldoc.DocumentElement;
